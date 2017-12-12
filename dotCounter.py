@@ -1,8 +1,12 @@
+'''
+Get area of image covered by bacteria
+Created by Shashank Manjunath, December 2017
+'''
+
 import os
 from scipy.ndimage import imread
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.misc import imsave
-from skimage.feature import peak_local_max
 import numpy as np
 import matplotlib.pyplot as plt
 from roipoly import roipoly
@@ -15,11 +19,14 @@ class imageStudy:
         self.files = os.listdir(data_path)
 
     def getMasks(self, showMask=0):
+        # Processes masks for all images in data path
         for file in self.files:
             if 'IMG' in file and 'roi' not in file and 'bw' not in file:
                 self.process_img(file, showMask=showMask)
 
     def countArea(self, csv_fname=None):
+        # Counts the area of all images in data path and returns it as a pandas DataFrame
+        # csv_fname parameter is the name of a csv file to output to
         imgName = []
         area = []
         for file in self.files:
@@ -36,6 +43,7 @@ class imageStudy:
         return peakArea
 
     def countImgArea(self, fname):
+        # Counts the area of a particular image pointed to by fname
         fpath = self.data_path + fname
         bw_file = imread(fpath)
         bw_file = bw_file > 0
@@ -45,6 +53,7 @@ class imageStudy:
         return pctArea
 
     def process_img(self, fname, showMask=0):
+        # Creates a mask for the image pointed to by fname
         fpath = self.data_path + fname
         img_file = imread(fpath)
         img_file = np.sum(img_file, 2).astype(np.float64)
@@ -78,12 +87,12 @@ class imageStudy:
             plt.show()
 
 
-def normalize_image(img):
+def normalize_image(img): # Normalizes the image
     norm_image = img/float(400)
     return norm_image
 
 
-def findFirstGreater(list, val):
+def findFirstGreater(list, val): # Finds first value in the list greater than the value supplied
     for i in range(len(list)):
         if list[i] > val:
             return i
@@ -91,6 +100,8 @@ def findFirstGreater(list, val):
 
 
 def processRow(rowDat, avgVal):
+    # Processes row such that the average pixel intensity of the row is equal to avgVal
+
     if np.sum(rowDat) < 0.1:
         return rowDat
 
@@ -108,9 +119,3 @@ def processRow(rowDat, avgVal):
         filtDat[i+xOffset] = rowDat[i+xOffset] - delta
 
     return filtDat
-
-
-if __name__ == '__main__':
-    dat = imageStudy('../dotCounters/efficacy_study_1/')
-    area = dat.countArea(csv_fname='efficacy_study_1.csv')
-    print(area)
