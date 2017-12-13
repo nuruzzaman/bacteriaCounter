@@ -54,6 +54,7 @@ class imageStudy:
 
     def process_img(self, fname, showMask=0):
         # Creates a mask for the image pointed to by fname
+        # If showMask = 1, roi's are shown after processing
         fpath = self.data_path + fname
         img_file = imread(fpath)
         img_file = np.sum(img_file, 2).astype(np.float64)
@@ -62,28 +63,34 @@ class imageStudy:
         roi_name = 'roi_' + fname[:-5] + '.npy'
         bw_name = 'bw_' + fname[:-5] + '.jpg'
 
+
+        # Loading or Defining ROI
         if roi_name not in os.listdir(self.data_path):
-            print('ROI file not found. Please manually define ROI.')
+            print('ROI file for ' + fname + ' not found. Please manually define ROI.')
             plt.imshow(img_file)
             roi = roipoly()
             img_roi = roi.getMask(img_file)
 
             np.save(roi_name, img_roi)
         else:
+            print('ROI file for ' + fname + ' found. Loading ROI...')
             img_roi = np.load(self.data_path + roi_name)
 
         maskImg = img_roi * img_file
 
         filtImg = np.zeros(maskImg.shape)
 
+        # Idea - 3D fit instead of 2D?
         for i in range(maskImg.shape[0]):
             filtImg[i, :] = processRow(maskImg[i, :], 0.5)
 
-        bw_img = filtImg > 0.65
+        imgThresh = 0.65
+
+        bw_img = filtImg > imgThresh
         imsave(self.data_path + bw_name, bw_img)
 
         if showMask != 0:
-            plt.imshow(filtImg > 0.65, cmap='gray')
+            plt.imshow(bw_img, cmap='gray')
             plt.show()
 
 
@@ -105,13 +112,13 @@ def processRow(rowDat, avgVal):
     if np.sum(rowDat) < 0.1:
         return rowDat
 
-
+    # Gaussian filter data that is greater than zero to help with consistency of polyfit
     ydat = gaussian_filter1d(rowDat[rowDat > 0], sigma=3)
     xdat = np.arange(0, ydat.shape[0], 1)
 
     p = np.poly1d(np.polyfit(xdat, ydat, 2))
     predY = p(xdat)
-    xOffset = findFirstGreater(rowDat, 0.25)
+    xOffset = findFirstGreater(rowDat, 0.25) # Find offset where data is greater than zero in raw data
     filtDat = np.zeros(rowDat.shape)
 
     for i in range(len(predY)):
@@ -119,3 +126,4 @@ def processRow(rowDat, avgVal):
         filtDat[i+xOffset] = rowDat[i+xOffset] - delta
 
     return filtDat
+
